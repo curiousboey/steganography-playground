@@ -1,0 +1,40 @@
+{
+  "name": "steganography-playground",
+  "version": "1.0.0",
+  "description": "Professional LSB steganography tool with interactive education system",
+  "main": "index.html",
+  "scripts": {
+    "start": "python -m http.server 8000",
+    "serve": "npx serve .",
+    "deploy": "gh-pages -d ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/curiousboey/steganography-playground.git"
+  },
+  "keywords": [
+    "steganography",
+    "LSB",
+    "cryptography",
+    "education",
+    "interactive",
+    "privacy",
+    "security",
+    "image-processing",
+    "cybersecurity",
+    "digital-forensics"
+  ],
+  "author": "Bhupendra <bhupendrabc71@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/curiousboey/steganography-playground/issues"
+  },
+  "homepage": "https://curiousboey.github.io/steganography-playground",
+  "devDependencies": {
+    "gh-pages": "^4.0.0",
+    "serve": "^14.0.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
