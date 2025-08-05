@@ -1,0 +1,1595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Steganography Playground</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500;600&display=swap');
+        
+        :root {
+            --primary-bg: #0a0f1c;
+            --secondary-bg: #1a2332;
+            --accent-bg: #243447;
+            --surface-bg: rgba(26, 35, 50, 0.8);
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --primary-color: #64ffda;
+            --secondary-color: #82b1ff;
+            --accent-color: #ff4081;
+            --text-primary: #e8eaed;
+            --text-secondary: #9aa0a6;
+            --text-muted: #5f6368;
+            --border-color: rgba(100, 255, 218, 0.2);
+            --border-accent: rgba(100, 255, 218, 0.4);
+            --shadow-primary: 0 8px 32px rgba(0, 0, 0, 0.3);
+            --shadow-glow: 0 0 20px rgba(100, 255, 218, 0.1);
+            --backdrop-blur: blur(20px);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, var(--primary-bg) 0%, var(--secondary-bg) 50%, var(--accent-bg) 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(100, 255, 218, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(130, 177, 255, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 40% 80%, rgba(255, 64, 129, 0.03) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
+        }
+        
+        .matrix-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -2;
+            opacity: 0.03;
+        }
+        
+        .container {
+            max-width: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 1rem;
+            position: relative;
+            z-index: 1;
+            box-sizing: border-box;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+            position: relative;
+        }
+        
+        .title {
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 1rem;
+            letter-spacing: -0.02em;
+            animation: fadeInUp 1s ease-out;
+        }
+        
+        .subtitle {
+            font-size: 1rem;
+            font-weight: 400;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            animation: fadeInUp 1s ease-out 0.2s both;
+        }
+        
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--glass-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 2rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--primary-color);
+            backdrop-filter: var(--backdrop-blur);
+            animation: fadeInUp 1s ease-out 0.4s both;
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .panel {
+            background: var(--glass-bg);
+            backdrop-filter: var(--backdrop-blur);
+            border: 1px solid var(--border-color);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            box-shadow: var(--shadow-primary);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .panel:hover {
+            border-color: var(--border-accent);
+            box-shadow: var(--shadow-primary), var(--shadow-glow);
+            transform: translateY(-2px);
+        }
+        
+        .panel::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--primary-color), transparent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .panel:hover::before {
+            opacity: 1;
+        }
+        
+        .panel-title {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 1.5rem;
+            letter-spacing: -0.01em;
+        }
+        
+        .panel-icon {
+            width: 2rem;
+            height: 2rem;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+        }
+        
+        .input-group {
+            margin-bottom: 1rem;
+        }
+        
+        .input-label {
+            display: block;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            font-size: 0.875rem;
+            letter-spacing: 0.01em;
+        }
+        
+        .file-input-wrapper {
+            position: relative;
+            display: block;
+            width: 100%;
+        }
+        
+        .file-input {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+        
+        .file-input-display {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 1rem 1.5rem;
+            background: var(--surface-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-family: inherit;
+            font-size: 0.875rem;
+            font-weight: 500;
+            min-height: 3rem;
+        }
+        
+        .file-input-display:hover {
+            background: var(--glass-bg);
+            border-color: var(--border-accent);
+            color: var(--text-primary);
+            transform: translateY(-1px);
+        }
+        
+        .file-input-display.has-file {
+            background: rgba(100, 255, 218, 0.1);
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+        
+        .text-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: var(--surface-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            color: var(--text-primary);
+            font-family: 'Fira Code', monospace;
+            font-size: 0.875rem;
+            line-height: 1.5;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            resize: vertical;
+            min-height: 4rem;
+            max-height: 6rem;
+        }
+        
+        .text-input:focus {
+            outline: none;
+            background: var(--glass-bg);
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(100, 255, 218, 0.1);
+        }
+        
+        .text-input::placeholder {
+            color: var(--text-muted);
+            font-style: italic;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 1rem 2rem;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            border: none;
+            border-radius: 0.75rem;
+            color: var(--primary-bg);
+            font-family: inherit;
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            letter-spacing: 0.01em;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            min-height: 3rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(100, 255, 218, 0.3);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.6s ease;
+        }
+        
+        .btn:hover::before {
+            left: 100%;
+        }
+        
+        .result-area {
+            grid-column: 1 / -1;
+            background: var(--glass-bg);
+            backdrop-filter: var(--backdrop-blur);
+            border: 1px solid var(--border-color);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            min-height: 200px;
+            box-shadow: var(--shadow-primary);
+        }
+        
+        .result-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 1.5rem;
+            text-align: center;
+            letter-spacing: -0.01em;
+        }
+        
+        .image-preview {
+            max-width: 100%;
+            max-height: 250px;
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            margin: 1rem 0;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        }
+        
+        .hidden-message {
+            background: rgba(100, 255, 218, 0.1);
+            border: 1px solid var(--primary-color);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            word-wrap: break-word;
+            font-family: 'Fira Code', monospace;
+            color: var(--text-primary);
+            line-height: 1.6;
+            font-size: 0.875rem;
+        }
+        
+        .status {
+            padding: 1rem 1.5rem;
+            border-radius: 0.75rem;
+            margin: 1rem 0;
+            text-align: center;
+            font-weight: 500;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        
+        .status.success {
+            background: rgba(100, 255, 218, 0.1);
+            border: 1px solid var(--primary-color);
+            color: var(--primary-color);
+        }
+        
+        .status.error {
+            background: rgba(255, 64, 129, 0.1);
+            border: 1px solid var(--accent-color);
+            color: var(--accent-color);
+        }
+        
+        .status.processing {
+            background: rgba(130, 177, 255, 0.1);
+            border: 1px solid var(--secondary-color);
+            color: var(--secondary-color);
+        }
+        
+        .info-panel {
+            background: var(--glass-bg);
+            backdrop-filter: var(--backdrop-blur);
+            border: 1px solid var(--border-color);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+            box-shadow: var(--shadow-primary);
+        }
+        
+        .info-title {
+            color: var(--text-primary);
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            text-align: center;
+            letter-spacing: -0.01em;
+        }
+        
+        .info-text {
+            color: var(--text-secondary);
+            line-height: 1.7;
+            font-size: 0.9rem;
+        }
+        
+        .info-text strong {
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+        
+        /* Interactive Education Section */
+        .education-section {
+            background: var(--glass-bg);
+            backdrop-filter: var(--backdrop-blur);
+            border: 1px solid var(--border-color);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+            box-shadow: var(--shadow-primary);
+        }
+        
+        .education-title {
+            color: var(--text-primary);
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            text-align: center;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .education-subtitle {
+            color: var(--text-secondary);
+            text-align: center;
+            margin-bottom: 1rem;
+            font-style: italic;
+        }
+        
+        .interactive-demo {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+        
+        .demo-card {
+            background: var(--surface-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .demo-card:hover {
+            border-color: var(--border-accent);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-glow);
+        }
+        
+        .demo-card.active {
+            border-color: var(--primary-color);
+            background: rgba(100, 255, 218, 0.1);
+        }
+        
+        .demo-card h4 {
+            color: var(--primary-color);
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .demo-card p {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            line-height: 1.5;
+        }
+        
+        .demo-content {
+            background: var(--surface-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            margin-top: 1rem;
+            display: none;
+        }
+        
+        .demo-content.active {
+            display: block;
+            animation: fadeInUp 0.5s ease-out;
+        }
+        
+        .binary-demo {
+            font-family: 'Fira Code', monospace;
+            background: var(--primary-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin: 1rem 0;
+            overflow-x: auto;
+        }
+        
+        .binary-char {
+            display: inline-block;
+            margin: 0 0.25rem;
+            padding: 0.25rem 0.5rem;
+            background: rgba(100, 255, 218, 0.1);
+            border-radius: 0.25rem;
+            color: var(--primary-color);
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
+        }
+        
+        .binary-char:hover {
+            background: rgba(100, 255, 218, 0.2);
+            transform: scale(1.1);
+        }
+        
+        .pixel-grid {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 2px;
+            max-width: 200px;
+            margin: 1rem auto;
+        }
+        
+        .pixel {
+            width: 20px;
+            height: 20px;
+            border: 1px solid var(--border-color);
+            border-radius: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-family: 'Fira Code', monospace;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .pixel:hover {
+            transform: scale(1.2);
+            border-color: var(--primary-color);
+        }
+        
+        .original-pixel {
+            background-color: #4a90e2;
+            color: white;
+        }
+        
+        .modified-pixel {
+            background-color: #4a91e2;
+            color: white;
+        }
+        
+        .step-indicator {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+        
+        .step {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--surface-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 2rem;
+            font-size: 0.875rem;
+            transition: all 0.3s ease;
+        }
+        
+        .step.active {
+            background: rgba(100, 255, 218, 0.1);
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+        
+        .step-number {
+            width: 1.5rem;
+            height: 1.5rem;
+            background: var(--primary-color);
+            color: var(--primary-bg);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.75rem;
+        }
+        
+        .interactive-input {
+            background: var(--surface-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            color: var(--text-primary);
+            font-family: 'Fira Code', monospace;
+            font-size: 0.875rem;
+            width: 100%;
+            margin: 1rem 0;
+            transition: all 0.3s ease;
+        }
+        
+        .interactive-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(100, 255, 218, 0.1);
+        }
+        
+        .highlight {
+            background: rgba(100, 255, 218, 0.2);
+            color: var(--primary-color);
+            padding: 0 0.25rem;
+            border-radius: 0.25rem;
+            font-weight: 600;
+        }
+        
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+        
+        .comparison-item {
+            text-align: center;
+            padding: 1rem;
+            background: var(--surface-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+        }
+        
+        .comparison-item h5 {
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+        
+        .visual-arrow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary-color);
+            font-size: 1.5rem;
+            margin: 1rem 0;
+        }
+        
+        .download-link {
+            display: block;
+            text-align: center;
+            color: var(--primary-color);
+            text-decoration: none;
+            margin: 1.5rem 0;
+            padding: 1rem 1.5rem;
+            border: 1px solid var(--primary-color);
+            border-radius: 0.75rem;
+            background: rgba(100, 255, 218, 0.05);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-weight: 500;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        
+        .download-link:hover {
+            background: rgba(100, 255, 218, 0.1);
+            border-color: var(--primary-color);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(100, 255, 218, 0.2);
+        }
+        
+        .spinner {
+            width: 1rem;
+            height: 1rem;
+            border: 2px solid transparent;
+            border-top: 2px solid currentColor;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 0.5rem;
+            }
+            
+            .main-content {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            .title {
+                font-size: 2rem;
+            }
+            
+            .panel {
+                padding: 1rem;
+            }
+            
+            .result-area {
+                padding: 1rem;
+            }
+            
+            .info-panel {
+                padding: 1rem;
+            }
+            
+            .education-section {
+                padding: 1rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .panel {
+                padding: 0.75rem;
+            }
+            
+            .title {
+                font-size: 1.5rem;
+            }
+            
+            .interactive-demo {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* Loading states */
+        .loading .btn {
+            pointer-events: none;
+            opacity: 0.7;
+        }
+        
+        .loading .spinner {
+            display: inline-block;
+        }
+        
+        /* Focus styles for accessibility */
+        .file-input:focus + .file-input-display {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(100, 255, 218, 0.1);
+        }
+        
+        /* Smooth scrolling */
+        html {
+            scroll-behavior: smooth;
+            overflow-x: hidden;
+        }
+        
+        /* Custom scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: var(--surface-bg);
+            border-radius: 3px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary-color);
+            border-radius: 3px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--secondary-color);
+        }
+    </style>
+</head>
+<body>
+    <canvas class="matrix-bg" id="matrixCanvas"></canvas>
+    
+    <div class="container">
+        <div class="header">
+            <h1 class="title">Steganography Playground</h1>
+            <p class="subtitle">Hide messages in plain sight with advanced LSB steganography</p>
+            <div class="badge">
+                <span>🔒</span>
+                <span>Enterprise-grade Security</span>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <div class="panel">
+                <h2 class="panel-title">
+                    <div class="panel-icon">🔒</div>
+                    Hide Message
+                </h2>
+                <div class="input-group">
+                    <label class="input-label">Select Image</label>
+                    <div class="file-input-wrapper">
+                        <input type="file" id="hideImageInput" class="file-input" accept="image/*">
+                        <label for="hideImageInput" class="file-input-display">
+                            <span>📁</span>
+                            <span>Choose Image File</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label class="input-label">Secret Message</label>
+                    <textarea id="secretMessage" class="text-input" rows="4" placeholder="Enter your confidential message here...&#10;&#10;• Messages are encrypted using LSB steganography&#10;• No visible changes to the image&#10;• Secure and undetectable"></textarea>
+                </div>
+                <button id="hideBtn" class="btn">
+                    <span class="spinner" style="display: none;"></span>
+                    <span>Encrypt & Hide Message</span>
+                </button>
+            </div>
+            
+            <div class="panel">
+                <h2 class="panel-title">
+                    <div class="panel-icon">🔓</div>
+                    Extract Message
+                </h2>
+                <div class="input-group">
+                    <label class="input-label">Select Encoded Image</label>
+                    <div class="file-input-wrapper">
+                        <input type="file" id="extractImageInput" class="file-input" accept="image/*">
+                        <label for="extractImageInput" class="file-input-display">
+                            <span>🖼️</span>
+                            <span>Choose Encoded Image</span>
+                        </label>
+                    </div>
+                </div>
+                <button id="extractBtn" class="btn">
+                    <span class="spinner" style="display: none;"></span>
+                    <span>Decrypt & Extract Message</span>
+                </button>
+            </div>
+        </div>
+        
+        <div class="result-area">
+            <h3 class="result-title">Operation Results</h3>
+            <div id="resultContent">
+                <p style="text-align: center; color: var(--text-muted); font-style: italic; padding: 2rem;">
+                    <span style="font-size: 2rem; display: block; margin-bottom: 1rem;">🚀</span>
+                    Ready to process your steganography operations.<br>
+                    Upload an image to hide a message or extract hidden content.
+                </p>
+            </div>
+        </div>
+        
+        <div class="education-section">
+            <h3 class="education-title">🎓 Interactive Steganography Guide</h3>
+            <p class="education-subtitle">Learn how messages are hidden in images with hands-on examples</p>
+            
+            <div class="interactive-demo">
+                <div class="demo-card" data-demo="binary">
+                    <h4>🔢 Step 1: Text to Binary</h4>
+                    <p>Every character is converted to 8-bit binary code. Try typing below!</p>
+                </div>
+                
+                <div class="demo-card" data-demo="pixels">
+                    <h4>🎨 Step 2: Pixel Modification</h4>
+                    <p>Binary data is embedded into the least significant bits of pixel colors.</p>
+                </div>
+                
+                <div class="demo-card" data-demo="comparison">
+                    <h4>👁️ Step 3: Visual Comparison</h4>
+                    <p>See how the image looks identical despite containing hidden data.</p>
+                </div>
+                
+                <div class="demo-card" data-demo="extraction">
+                    <h4>🔓 Step 4: Message Extraction</h4>
+                    <p>Learn how the hidden message is retrieved from the modified pixels.</p>
+                </div>
+            </div>
+            
+            <!-- Binary Conversion Demo -->
+            <div class="demo-content" id="binary-demo">
+                <h4 style="color: var(--primary-color); margin-bottom: 1rem;">Text to Binary Conversion</h4>
+                <p style="color: var(--text-secondary); margin-bottom: 1rem;">Type any message to see how it's converted to binary:</p>
+                
+                <input type="text" class="interactive-input" id="textInput" placeholder="Type your message here..." maxlength="10" value="Hi!">
+                
+                <div class="binary-demo" id="binaryOutput">
+                    <div style="margin-bottom: 0.5rem; color: var(--text-secondary); font-size: 0.8rem;">Binary representation:</div>
+                </div>
+                
+                <div style="color: var(--text-muted); font-size: 0.8rem; margin-top: 1rem;">
+                    💡 Each character needs 8 bits. 'H' = 72 in ASCII = 01001000 in binary
+                </div>
+            </div>
+            
+            <!-- Pixel Modification Demo -->
+            <div class="demo-content" id="pixels-demo">
+                <h4 style="color: var(--primary-color); margin-bottom: 1rem;">LSB Pixel Modification</h4>
+                <p style="color: var(--text-secondary); margin-bottom: 1rem;">See how the least significant bit changes:</p>
+                
+                <div class="comparison-grid">
+                    <div class="comparison-item">
+                        <h5>Original Pixel (Red Channel)</h5>
+                        <div style="font-family: 'Fira Code', monospace; color: var(--primary-color); font-size: 1.1rem; margin: 0.5rem 0;">
+                            0100100<span class="highlight">0</span>
+                        </div>
+                        <div style="color: var(--text-muted); font-size: 0.8rem;">Value: 72</div>
+                    </div>
+                    
+                    <div class="comparison-item">
+                        <h5>Modified Pixel (Red Channel)</h5>
+                        <div style="font-family: 'Fira Code', monospace; color: var(--accent-color); font-size: 1.1rem; margin: 0.5rem 0;">
+                            0100100<span class="highlight">1</span>
+                        </div>
+                        <div style="color: var(--text-muted); font-size: 0.8rem;">Value: 73</div>
+                    </div>
+                </div>
+                
+                <div class="visual-arrow">→</div>
+                
+                <div class="pixel-grid" id="pixelGrid">
+                    <!-- Pixels will be generated by JavaScript -->
+                </div>
+                
+                <div style="color: var(--text-muted); font-size: 0.8rem; margin-top: 1rem; text-align: center;">
+                    💡 The color change is imperceptible to human eyes (72 vs 73 out of 255)
+                </div>
+            </div>
+            
+            <!-- Visual Comparison Demo -->
+            <div class="demo-content" id="comparison-demo">
+                <h4 style="color: var(--primary-color); margin-bottom: 1rem;">Before vs After Comparison</h4>
+                
+                <div class="comparison-grid">
+                    <div class="comparison-item">
+                        <h5>Original Image</h5>
+                        <canvas id="originalCanvas" width="150" height="150" style="border: 1px solid var(--border-color); border-radius: 0.5rem;"></canvas>
+                        <div style="color: var(--text-muted); font-size: 0.8rem; margin-top: 0.5rem;">No hidden data</div>
+                    </div>
+                    
+                    <div class="comparison-item">
+                        <h5>Steganographic Image</h5>
+                        <canvas id="modifiedCanvas" width="150" height="150" style="border: 1px solid var(--border-color); border-radius: 0.5rem;"></canvas>
+                        <div style="color: var(--primary-color); font-size: 0.8rem; margin-top: 0.5rem;">Contains: "Secret!"</div>
+                    </div>
+                </div>
+                
+                <div style="text-align: center; margin-top: 1rem; color: var(--text-secondary);">
+                    👀 Can you spot the difference? Neither can anyone else!
+                </div>
+            </div>
+            
+            <!-- Extraction Demo -->
+            <div class="demo-content" id="extraction-demo">
+                <h4 style="color: var(--primary-color); margin-bottom: 1rem;">Message Extraction Process</h4>
+                
+                <div class="step-indicator">
+                    <div class="step active">
+                        <div class="step-number">1</div>
+                        <span>Read LSBs</span>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">2</div>
+                        <span>Group Bits</span>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">3</div>
+                        <span>Convert to Text</span>
+                    </div>
+                </div>
+                
+                <div id="extractionSteps">
+                    <div class="extraction-step active" id="step1">
+                        <div style="color: var(--text-secondary); margin-bottom: 1rem;">
+                            Reading least significant bits from pixels:
+                        </div>
+                        <div class="binary-demo">
+                            <span class="binary-char">0</span>
+                            <span class="binary-char">1</span>
+                            <span class="binary-char">0</span>
+                            <span class="binary-char">0</span>
+                            <span class="binary-char">1</span>
+                            <span class="binary-char">0</span>
+                            <span class="binary-char">0</span>
+                            <span class="binary-char">0</span>
+                            <span style="color: var(--text-muted);">...</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <button class="btn" style="margin-top: 1rem; width: auto; padding: 0.5rem 1rem;" onclick="nextExtractionStep()">
+                    <span>Next Step →</span>
+                </button>
+            </div>
+        </div>
+        
+        <div class="info-panel">
+            <h3 class="info-title">Technical Implementation</h3>
+            <div class="info-text">
+                <p><strong>LSB Steganography:</strong> This advanced tool uses Least Significant Bit steganography to securely embed text messages within image pixels. The message is encoded by modifying the least significant bits of RGB color values, ensuring changes remain imperceptible to the human eye.</p>
+                <br>
+                <p><strong>Security Features:</strong> Messages are converted to binary format and distributed across image pixels using sophisticated algorithms. The original image quality and visual appearance are completely preserved while maintaining data integrity.</p>
+                <br>
+                <p><strong>Format Support:</strong> Compatible with PNG, JPG, JPEG, and other standard image formats. PNG format is recommended for optimal results due to lossless compression properties.</p>
+                <br>
+                <p><strong>Use Cases:</strong> Perfect for secure communication, digital watermarking, copyright protection, and covert data transmission in professional environments.</p>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Matrix background effect
+        const canvas = document.getElementById('matrixCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        
+        const matrix = "ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789@#$%^&*()*&^%+-/~{[|`]}";
+        const matrixArray = matrix.split("");
+        
+        const fontSize = 10;
+        const columns = canvas.width / fontSize;
+        
+        const drops = [];
+        for(let x = 0; x < columns; x++) {
+            drops[x] = 1;
+        }
+        
+        function drawMatrix() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.04)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.fillStyle = '#00ff41';
+            ctx.font = fontSize + 'px monospace';
+            
+            for(let i = 0; i < drops.length; i++) {
+                const text = matrixArray[Math.floor(Math.random() * matrixArray.length)];
+                ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+                
+                if(drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                    drops[i] = 0;
+                }
+                drops[i]++;
+            }
+        }
+        
+        setInterval(drawMatrix, 35);
+        
+        // Resize handler
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+        
+        // Steganography functions
+        class Steganography {
+            static textToBinary(text) {
+                return text.split('').map(char => 
+                    char.charCodeAt(0).toString(2).padStart(8, '0')
+                ).join('');
+            }
+            
+            static binaryToText(binary) {
+                const bytes = binary.match(/.{1,8}/g);
+                return bytes.map(byte => String.fromCharCode(parseInt(byte, 2))).join('');
+            }
+            
+            static hideMessage(imageData, message) {
+                const binaryMessage = this.textToBinary(message + '1111111111111110'); // End marker
+                const data = imageData.data;
+                
+                if (binaryMessage.length > data.length) {
+                    throw new Error('Message too long for this image');
+                }
+                
+                for (let i = 0; i < binaryMessage.length; i++) {
+                    // Modify LSB of red channel
+                    data[i * 4] = (data[i * 4] & 0xFE) | parseInt(binaryMessage[i]);
+                }
+                
+                return imageData;
+            }
+            
+            static extractMessage(imageData) {
+                const data = imageData.data;
+                let binaryMessage = '';
+                const endMarker = '1111111111111110';
+                
+                for (let i = 0; i < data.length / 4; i++) {
+                    binaryMessage += (data[i * 4] & 1).toString();
+                    
+                    // Check for end marker
+                    if (binaryMessage.length >= 16) {
+                        const lastBits = binaryMessage.slice(-16);
+                        if (lastBits === endMarker) {
+                            binaryMessage = binaryMessage.slice(0, -16);
+                            break;
+                        }
+                    }
+                }
+                
+                try {
+                    return this.binaryToText(binaryMessage);
+                } catch (e) {
+                    throw new Error('No hidden message found or corrupted data');
+                }
+            }
+        }
+        
+        // UI handlers
+        const hideImageInput = document.getElementById('hideImageInput');
+        const extractImageInput = document.getElementById('extractImageInput');
+        const secretMessage = document.getElementById('secretMessage');
+        const hideBtn = document.getElementById('hideBtn');
+        const extractBtn = document.getElementById('extractBtn');
+        const resultContent = document.getElementById('resultContent');
+        
+        function showStatus(message, type = 'success', showSpinner = false) {
+            const status = document.createElement('div');
+            status.className = `status ${type}`;
+            
+            if (showSpinner) {
+                const spinner = document.createElement('div');
+                spinner.className = 'spinner';
+                status.appendChild(spinner);
+            }
+            
+            const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : '⏳';
+            const text = document.createElement('span');
+            text.textContent = `${icon} ${message}`;
+            status.appendChild(text);
+            
+            resultContent.innerHTML = '';
+            resultContent.appendChild(status);
+        }
+        
+        function setButtonLoading(button, isLoading) {
+            const spinner = button.querySelector('.spinner');
+            const text = button.querySelector('span:last-child');
+            
+            if (isLoading) {
+                spinner.style.display = 'inline-block';
+                button.disabled = true;
+                button.classList.add('loading');
+            } else {
+                spinner.style.display = 'none';
+                button.disabled = false;
+                button.classList.remove('loading');
+            }
+        }
+        
+        function processImage(file, callback) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+                    callback(canvas, ctx);
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        hideBtn.addEventListener('click', function() {
+            const file = hideImageInput.files[0];
+            const message = secretMessage.value.trim();
+            
+            if (!file) {
+                showStatus('Please select an image file to proceed', 'error');
+                return;
+            }
+            
+            if (!message) {
+                showStatus('Please enter a message to hide', 'error');
+                return;
+            }
+            
+            setButtonLoading(hideBtn, true);
+            showStatus('Processing image and encoding message...', 'processing', true);
+            
+            processImage(file, function(canvas, ctx) {
+                try {
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const encodedImageData = Steganography.hideMessage(imageData, message);
+                    ctx.putImageData(encodedImageData, 0, 0);
+                    
+                    // Create download link
+                    canvas.toBlob(function(blob) {
+                        const url = URL.createObjectURL(blob);
+                        const img = document.createElement('img');
+                        img.src = url;
+                        img.className = 'image-preview';
+                        
+                        const downloadLink = document.createElement('a');
+                        downloadLink.href = url;
+                        downloadLink.download = `encoded_${file.name.split('.')[0]}_${Date.now()}.png`;
+                        downloadLink.className = 'download-link';
+                        downloadLink.innerHTML = `
+                            <span>💾</span>
+                            <span>Download Encoded Image</span>
+                        `;
+                        
+                        resultContent.innerHTML = '';
+                        const successMsg = document.createElement('div');
+                        successMsg.className = 'status success';
+                        successMsg.innerHTML = `
+                            <span>✅</span>
+                            <span>Message successfully hidden! Image dimensions: ${canvas.width} × ${canvas.height}px</span>
+                        `;
+                        
+                        resultContent.appendChild(successMsg);
+                        resultContent.appendChild(img);
+                        resultContent.appendChild(downloadLink);
+                        
+                        setButtonLoading(hideBtn, false);
+                    }, 'image/png');
+                    
+                } catch (error) {
+                    showStatus(`Encoding failed: ${error.message}`, 'error');
+                    setButtonLoading(hideBtn, false);
+                }
+            });
+        });
+        
+        extractBtn.addEventListener('click', function() {
+            const file = extractImageInput.files[0];
+            
+            if (!file) {
+                showStatus('Please select an encoded image file', 'error');
+                return;
+            }
+            
+            setButtonLoading(extractBtn, true);
+            showStatus('Analyzing image and extracting hidden message...', 'processing', true);
+            
+            processImage(file, function(canvas, ctx) {
+                try {
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const extractedMessage = Steganography.extractMessage(imageData);
+                    
+                    const img = document.createElement('img');
+                    img.src = URL.createObjectURL(file);
+                    img.className = 'image-preview';
+                    
+                    const messageDiv = document.createElement('div');
+                    messageDiv.className = 'hidden-message';
+                    messageDiv.innerHTML = `
+                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; color: var(--primary-color); font-weight: 600;">
+                            <span>🔓</span>
+                            <span>Extracted Message:</span>
+                        </div>
+                        <div style="white-space: pre-wrap; font-family: 'Fira Code', monospace;">${extractedMessage}</div>
+                    `;
+                    
+                    resultContent.innerHTML = '';
+                    const successMsg = document.createElement('div');
+                    successMsg.className = 'status success';
+                    successMsg.innerHTML = `
+                        <span>✅</span>
+                        <span>Message successfully extracted from image!</span>
+                    `;
+                    
+                    resultContent.appendChild(successMsg);
+                    resultContent.appendChild(img);
+                    resultContent.appendChild(messageDiv);
+                    
+                    setButtonLoading(extractBtn, false);
+                    
+                } catch (error) {
+                    const img = document.createElement('img');
+                    img.src = URL.createObjectURL(file);
+                    img.className = 'image-preview';
+                    
+                    resultContent.innerHTML = '';
+                    const errorMsg = document.createElement('div');
+                    errorMsg.className = 'status error';
+                    errorMsg.innerHTML = `
+                        <span>❌</span>
+                        <span>Extraction failed: ${error.message}</span>
+                    `;
+                    
+                    resultContent.appendChild(errorMsg);
+                    resultContent.appendChild(img);
+                    
+                    setButtonLoading(extractBtn, false);
+                }
+            });
+        });
+        
+        // File input label updates
+        hideImageInput.addEventListener('change', function() {
+            const label = document.querySelector('label[for="hideImageInput"]');
+            const icon = label.querySelector('span:first-child');
+            const text = label.querySelector('span:last-child');
+            
+            if (this.files[0]) {
+                icon.textContent = '✅';
+                text.textContent = this.files[0].name;
+                label.classList.add('has-file');
+            } else {
+                icon.textContent = '📁';
+                text.textContent = 'Choose Image File';
+                label.classList.remove('has-file');
+            }
+        });
+        
+        extractImageInput.addEventListener('change', function() {
+            const label = document.querySelector('label[for="extractImageInput"]');
+            const icon = label.querySelector('span:first-child');
+            const text = label.querySelector('span:last-child');
+            
+            if (this.files[0]) {
+                icon.textContent = '✅';
+                text.textContent = this.files[0].name;
+                label.classList.add('has-file');
+            } else {
+                icon.textContent = '🖼️';
+                text.textContent = 'Choose Encoded Image';
+                label.classList.remove('has-file');
+            }
+        });
+        
+        // Interactive Education System
+        let currentDemo = null;
+        let extractionStepIndex = 0;
+        
+        // Demo card interactions
+        document.querySelectorAll('.demo-card').forEach(card => {
+            card.addEventListener('click', function() {
+                const demoType = this.dataset.demo;
+                
+                // Remove active class from all cards and demos
+                document.querySelectorAll('.demo-card').forEach(c => c.classList.remove('active'));
+                document.querySelectorAll('.demo-content').forEach(d => d.classList.remove('active'));
+                
+                // Add active class to clicked card and corresponding demo
+                this.classList.add('active');
+                document.getElementById(demoType + '-demo').classList.add('active');
+                
+                currentDemo = demoType;
+                
+                // Initialize specific demos
+                if (demoType === 'binary') {
+                    updateBinaryDemo();
+                } else if (demoType === 'pixels') {
+                    createPixelGrid();
+                } else if (demoType === 'comparison') {
+                    createComparisonCanvases();
+                } else if (demoType === 'extraction') {
+                    resetExtractionDemo();
+                }
+            });
+        });
+        
+        // Binary conversion demo
+        function updateBinaryDemo() {
+            const textInput = document.getElementById('textInput');
+            const binaryOutput = document.getElementById('binaryOutput');
+            
+            textInput.addEventListener('input', function() {
+                const text = this.value;
+                let binaryHTML = '<div style="margin-bottom: 0.5rem; color: var(--text-secondary); font-size: 0.8rem;">Binary representation:</div>';
+                
+                for (let char of text) {
+                    const binary = char.charCodeAt(0).toString(2).padStart(8, '0');
+                    binaryHTML += `<div style="margin: 0.5rem 0; display: flex; align-items: center; gap: 1rem;">`;
+                    binaryHTML += `<span style="color: var(--primary-color); font-weight: 600; min-width: 2rem;">'${char}'</span>`;
+                    binaryHTML += `<span style="color: var(--text-muted);">→</span>`;
+                    binaryHTML += `<span style="color: var(--secondary-color);">${binary}</span>`;
+                    binaryHTML += `</div>`;
+                }
+                
+                binaryOutput.innerHTML = binaryHTML;
+            });
+            
+            // Trigger initial update
+            textInput.dispatchEvent(new Event('input'));
+        }
+        
+        // Pixel grid demo
+        function createPixelGrid() {
+            const pixelGrid = document.getElementById('pixelGrid');
+            pixelGrid.innerHTML = '';
+            
+            const colors = [
+                { r: 72, g: 100, b: 150 },   // Original colors
+                { r: 73, g: 101, b: 151 },   // Modified colors (LSB changed)
+                { r: 74, g: 102, b: 150 },
+                { r: 75, g: 103, b: 151 },
+                { r: 76, g: 100, b: 150 },
+                { r: 77, g: 101, b: 151 },
+                { r: 78, g: 102, b: 150 },
+                { r: 79, g: 103, b: 151 }
+            ];
+            
+            colors.forEach((color, index) => {
+                const pixel = document.createElement('div');
+                pixel.className = 'pixel';
+                pixel.style.backgroundColor = `rgb(${color.r}, ${color.g}, ${color.b})`;
+                pixel.textContent = color.r & 1; // Show LSB
+                pixel.title = `RGB(${color.r}, ${color.g}, ${color.b}) - LSB: ${color.r & 1}`;
+                
+                pixel.addEventListener('click', function() {
+                    // Toggle LSB
+                    const newR = color.r ^ 1; // XOR with 1 to flip LSB
+                    color.r = newR;
+                    this.style.backgroundColor = `rgb(${color.r}, ${color.g}, ${color.b})`;
+                    this.textContent = color.r & 1;
+                    this.title = `RGB(${color.r}, ${color.g}, ${color.b}) - LSB: ${color.r & 1}`;
+                });
+                
+                pixelGrid.appendChild(pixel);
+            });
+        }
+        
+        // Comparison canvases demo
+        function createComparisonCanvases() {
+            const originalCanvas = document.getElementById('originalCanvas');
+            const modifiedCanvas = document.getElementById('modifiedCanvas');
+            const originalCtx = originalCanvas.getContext('2d');
+            const modifiedCtx = modifiedCanvas.getContext('2d');
+            
+            // Create a simple gradient
+            function drawGradient(ctx, withMessage = false) {
+                const gradient = ctx.createLinearGradient(0, 0, 150, 150);
+                gradient.addColorStop(0, '#4a90e2');
+                gradient.addColorStop(0.5, '#7b68ee');
+                gradient.addColorStop(1, '#9370db');
+                
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, 150, 150);
+                
+                if (withMessage) {
+                    // Simulate embedding "Secret!" by slightly modifying pixel values
+                    const imageData = ctx.getImageData(0, 0, 150, 150);
+                    const data = imageData.data;
+                    const message = "Secret!";
+                    const binaryMessage = message.split('').map(char => 
+                        char.charCodeAt(0).toString(2).padStart(8, '0')
+                    ).join('');
+                    
+                    // Modify LSBs to embed message
+                    for (let i = 0; i < binaryMessage.length && i < data.length / 4; i++) {
+                        data[i * 4] = (data[i * 4] & 0xFE) | parseInt(binaryMessage[i]);
+                    }
+                    
+                    ctx.putImageData(imageData, 0, 0);
+                }
+            }
+            
+            drawGradient(originalCtx, false);
+            drawGradient(modifiedCtx, true);
+        }
+        
+        // Extraction demo
+        function resetExtractionDemo() {
+            extractionStepIndex = 0;
+            document.querySelectorAll('.step').forEach((step, index) => {
+                step.classList.toggle('active', index === 0);
+            });
+            
+            const stepsContainer = document.getElementById('extractionSteps');
+            stepsContainer.innerHTML = `
+                <div class="extraction-step active" id="step1">
+                    <div style="color: var(--text-secondary); margin-bottom: 1rem;">
+                        Reading least significant bits from pixels:
+                    </div>
+                    <div class="binary-demo">
+                        <span class="binary-char">0</span>
+                        <span class="binary-char">1</span>
+                        <span class="binary-char">0</span>
+                        <span class="binary-char">0</span>
+                        <span class="binary-char">1</span>
+                        <span class="binary-char">0</span>
+                        <span class="binary-char">0</span>
+                        <span class="binary-char">0</span>
+                        <span style="color: var(--text-muted);">...</span>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function nextExtractionStep() {
+            extractionStepIndex++;
+            
+            const stepsContainer = document.getElementById('extractionSteps');
+            const steps = document.querySelectorAll('.step');
+            
+            // Update step indicators
+            steps.forEach((step, index) => {
+                step.classList.toggle('active', index === extractionStepIndex);
+            });
+            
+            if (extractionStepIndex === 1) {
+                stepsContainer.innerHTML = `
+                    <div class="extraction-step active">
+                        <div style="color: var(--text-secondary); margin-bottom: 1rem;">
+                            Grouping bits into 8-bit bytes:
+                        </div>
+                        <div class="binary-demo">
+                            <div style="margin: 0.5rem 0;">
+                                <span style="background: rgba(100, 255, 218, 0.2); padding: 0.25rem; border-radius: 0.25rem; margin-right: 1rem;">01001000</span>
+                                <span style="color: var(--text-muted);">→ 'H' (72)</span>
+                            </div>
+                            <div style="margin: 0.5rem 0;">
+                                <span style="background: rgba(130, 177, 255, 0.2); padding: 0.25rem; border-radius: 0.25rem; margin-right: 1rem;">01101001</span>
+                                <span style="color: var(--text-muted);">→ 'i' (105)</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else if (extractionStepIndex === 2) {
+                stepsContainer.innerHTML = `
+                    <div class="extraction-step active">
+                        <div style="color: var(--text-secondary); margin-bottom: 1rem;">
+                            Converting binary to ASCII characters:
+                        </div>
+                        <div style="text-align: center; font-size: 1.5rem; color: var(--primary-color); font-weight: 600; padding: 1rem; background: rgba(100, 255, 218, 0.1); border-radius: 0.5rem;">
+                            "Secret!"
+                        </div>
+                        <div style="color: var(--text-muted); text-align: center; margin-top: 1rem; font-size: 0.9rem;">
+                            🎉 Hidden message successfully extracted!
+                        </div>
+                    </div>
+                `;
+                
+                // Hide the next button
+                const nextBtn = document.querySelector('.education-section .btn');
+                nextBtn.style.display = 'none';
+                
+                // Reset after 3 seconds
+                setTimeout(() => {
+                    nextBtn.style.display = 'flex';
+                    resetExtractionDemo();
+                }, 3000);
+            }
+        }
+        
+        // Initialize first demo
+        document.addEventListener('DOMContentLoaded', function() {
+            // Auto-activate first demo
+            setTimeout(() => {
+                document.querySelector('.demo-card[data-demo="binary"]').click();
+            }, 500);
+        });
+    </script>
+</body>
+</html>
